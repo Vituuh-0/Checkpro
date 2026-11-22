@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHECKPRO - Checklist Industrial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes spin-fast {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner {
+            animation: spin-fast 0.8s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Icons = {
+            paintBucket: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>,
+            disc: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" strokeWidth="2"/><circle cx="12" cy="12" r="3" strokeWidth="2"/></svg>,
+            cpu: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2" strokeWidth="2"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 9h6v6H9zM9 1v3m6-3v3m-6 16v3m6-3v3M1 9h3m-3 6h3m16-6h3m-16 6h3"/></svg>,
+            truck: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 100-4 2 2 0 000 4zm10 0a2 2 0 100-4 2 2 0 000 4z"/></svg>,
+            anchor: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8a2 2 0 100-4 2 2 0 000 4zm0 0v12m0 0a6 6 0 01-6-6H4a8 8 0 0016 0h-2a6 6 0 01-6 6z"/></svg>,
+            layers: <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>,
+            shield: <span className="text-xl">🛡️</span>,
+            zap: <span className="text-xl">⚡</span>,
+            link: <span className="text-xl">🔗</span>,
+            gauge: <span className="text-xl">📻</span>,
+            droplet: <span className="text-xl">💧</span>,
+            volume: <span className="text-xl">🔊</span>,
+            sparkles: <span className="text-xl">✨</span>,
+            tool: <span className="text-xl">🔧</span>,
+            power: <span className="text-xl">🔌</span>,
+            alert: <span className="text-xl">⚠️</span>,
+            hat: <span className="text-xl">🪖</span>,
+            box: <span className="text-xl">📦</span>,
+            target: <span className="text-xl">🎯</span>,
+            filter: <span className="text-xl">🌪️</span>,
+            lock: <span className="text-xl">🔒</span>,
+            check: <svg className="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>,
+            cross: <svg className="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"/></svg>,
+            minus: <svg className="w-5 h-5 inline-block" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M20 12H4"/></svg>
+        };
+
+        const COMMON_NC_REASONS = [
+            "Selecione o motivo padrão ou escolha 'Outro' para digitar",
+            "Vazamento detectado",
+            "Danificado ou quebrado",
+            "Ruído ou vibração anormal",
+            "Componente desgastado",
+            "Falta de aterramento / proteção",
+            "Limpeza / sujeira excessiva",
+            "Componente solto ou sem fixação",
+            "EPI ou item de segurança ausente",
+            "Outro (digitar explicação personalizada)"
+        ];
+
+        const MACHINES_DATA = {
+            "maquina_tinta": {
+                name: "Bomba Duplo Diafragma",
+                sector: "Operações e Manutenção",
+                icon: Icons.paintBucket,
+                items: [
+                    { id: 1, name: "Carcaça e base sem danos aparentes", icon: Icons.shield },
+                    { id: 2, name: "Mangueiras de entrada e saída sem vazamentos ou ressecamento", icon: Icons.droplet },
+                    { id: 3, name: "Conexões e abraçadeiras firmes", icon: Icons.link },
+                    { id: 4, name: "Regulador/filtro de ar comprimido em bom estado", icon: Icons.filter },
+                    { id: 5, name: "Pressão de ar compatível com a operação", icon: Icons.gauge },
+                    { id: 6, name: "Ausência de vazamentos de fluido ou ar", icon: Icons.droplet },
+                    { id: 7, name: "Aterramento/equipotencialização, quando aplicável", icon: Icons.zap },
+                    { id: 8, name: "Diafragmas sem sinais de falha aparente", icon: Icons.box },
+                    { id: 9, name: "Válvulas funcionando sem travamento", icon: Icons.tool },
+                    { id: 10, name: "Ruído ou vibração anormal durante teste", icon: Icons.volume },
+                    { id: 11, name: "Área limpa e sem respingos de produto", icon: Icons.sparkles },
+                    { id: 12, name: "Aplicador em bom estado (sem trincas, vazamentos e com bico limpo)", icon: Icons.target }
+                ]
+            },
+            "misturador_industrial": {
+                name: "Misturador Industrial",
+                sector: "Operações e Manutenção",
+                icon: Icons.disc,
+                items: [
+                    { id: 1, name: "Estrutura, suporte e haste de mistura sem danos", icon: Icons.shield },
+                    { id: 2, name: "Cabo elétrico e plugue sem cortes ou fios expostos", icon: Icons.power },
+                    { id: 3, name: "Interruptor/controle de velocidade funcionando", icon: Icons.tool },
+                    { id: 4, name: "Hélice/disco misturador fixado e sem deformação", icon: Icons.disc },
+                    { id: 5, name: "Proteção contra respingos disponível, quando aplicável", icon: Icons.shield },
+                    { id: 6, name: "Ruído, vibração ou aquecimento anormal durante teste", icon: Icons.alert },
+                    { id: 7, name: "Recipiente posicionado de forma estável", icon: Icons.box },
+                    { id: 8, name: "Área ventilada e sem fontes de ignição", icon: Icons.sparkles },
+                    { id: 9, name: "Limpeza do equipamento após uso anterior", icon: Icons.sparkles },
+                    { id: 10, name: "EPI adequado disponível", icon: Icons.hat }
+                ]
+            },
+            "compressor": {
+                name: "Compressor de Ar",
+                sector: "Operações e Manutenção",
+                icon: Icons.cpu,
+                items: [
+                    { id: 1, name: "Nível de óleo do compressor dentro da especificação", icon: Icons.droplet },
+                    { id: 2, name: "Ausência de vazamentos de ar, óleo ou combustível", icon: Icons.droplet },
+                    { id: 3, name: "Mangueiras, conexões e engates rápidos em boas condições", icon: Icons.link },
+                    { id: 4, name: "Reservatório de ar (vaso de pressão) sem danos e com dreno funcionando", icon: Icons.box },
+                    { id: 5, name: "Pressão de trabalho dentro da faixa e manômetro funcionando", icon: Icons.gauge },
+                    { id: 6, name: "Motor elétrico ou a combustão em bom estado", icon: Icons.cpu },
+                    { id: 7, name: "Cabo elétrico, plugue, chave e aterramento em boas condições", icon: Icons.power },
+                    { id: 8, name: "Correias, polias e proteções instaladas", icon: Icons.tool },
+                    { id: 9, name: "Válvula de segurança e dispositivos de proteção funcionando", icon: Icons.shield },
+                    { id: 10, name: "Área limpa, ventilada e livre de materiais inflamáveis", icon: Icons.sparkles },
+                    { id: 11, name: "EPIs adequados disponíveis", icon: Icons.hat }
+                ]
+            },
+            "unidade_jateamento": {
+                name: "Unidade de Jateamento",
+                sector: "Operações e Manutenção",
+                icon: Icons.truck,
+                items: [
+                    { id: 1, name: "Vaso/estrutura sem corrosão, trincas ou danos aparentes", icon: Icons.shield },
+                    { id: 2, name: "Mangueiras de pressão sem cortes ou desgaste", icon: Icons.droplet },
+                    { id: 3, name: "Conexões, engates e abraçadeiras firmes", icon: Icons.link },
+                    { id: 4, name: "Bico aplicador em bom estado e compatível", icon: Icons.target },
+                    { id: 5, name: "Válvula de segurança/alívio em bom estado", icon: Icons.shield },
+                    { id: 6, name: "Regulador/manômetro de pressão funcionando", icon: Icons.gauge },
+                    { id: 7, name: "Filtro/separador de umidade em condições", icon: Icons.filter },
+                    { id: 8, name: "Aterramento/equipotencialização, quando aplicável", icon: Icons.zap },
+                    { id: 9, name: "Válvula de entrada e saída manual em bom estado", icon: Icons.tool },
+                    { id: 10, name: "Área isolada e sinalizada para operação", icon: Icons.alert },
+                    { id: 11, name: "Ausência de vazamentos de ar/insumo", icon: Icons.droplet },
+                    { id: 12, name: "EPI específico disponível", icon: Icons.hat }
+                ]
+            },
+            "guincho_eletrico": {
+                name: "Guincho Elétrico",
+                sector: "Movimentação de Carga",
+                icon: Icons.anchor,
+                items: [
+                    { id: 1, name: "Capacidade nominal identificada e compatível com a carga", icon: Icons.target },
+                    { id: 2, name: "Estrutura, suporte e fixação sem trincas ou folgas", icon: Icons.shield },
+                    { id: 3, name: "Cabo de aço/cinta/corrente sem fios rompidos ou esmagamento", icon: Icons.link },
+                    { id: 4, name: "Gancho e trava de segurança em bom estado", icon: Icons.anchor },
+                    { id: 5, name: "Limitador de fim de curso funcionando", icon: Icons.lock },
+                    { id: 6, name: "Controle/botoeira funcionando e sem botões travados", icon: Icons.tool },
+                    { id: 7, name: "Cabo elétrico e plugue sem danos", icon: Icons.power },
+                    { id: 8, name: "Freio segurando a carga em teste", icon: Icons.shield },
+                    { id: 9, name: "Movimento de subida/descida sem ruídos anormais", icon: Icons.volume },
+                    { id: 10, name: "Área de içamento isolada e sem pessoas sob carga", icon: Icons.alert },
+                    { id: 11, name: "Sinalização de segurança visível", icon: Icons.sparkles }
+                ]
+            },
+            "portico_rolante": {
+                name: "Pórtico Rolante",
+                sector: "Movimentação de Carga",
+                icon: Icons.layers,
+                items: [
+                    { id: 1, name: "Freios", icon: Icons.shield },
+                    { id: 2, name: "Trilhos", icon: "🛤️" },
+                    { id: 3, name: "Controle", icon: Icons.tool },
+                    { id: 4, name: "Equipamento identificado", icon: Icons.target },
+                    { id: 5, name: "Mecanismo de deslocamento lateral", icon: Icons.tool },
+                    { id: 6, name: "Cabo de alimentação elétrica", icon: Icons.power },
+                    { id: 7, name: "Cabo de aço", icon: Icons.link },
+                    { id: 8, name: "Mecanismo de translação no trilho", icon: "⚙️" },
+                    { id: 9, name: "Sinal sonoro", icon: Icons.volume },
+                    { id: 10, name: "Bloco de carga possui trava de segurança", icon: Icons.lock },
+                    { id: 11, name: "Engrenagem das rodas de tração", icon: "⚙️" },
+                    { id: 12, name: "Rodas livres em bom estado", icon: "🔘" },
+                    { id: 13, name: "Cintas de apoio para movimentar peças", icon: Icons.link },
+                    { id: 14, name: "Guias para movimentar peças", icon: Icons.target }
+                ]
+            }
+        };
+
+        function App() {
+            const [isLoading, setIsLoading] = useState(true);
+            const [user, setUser] = useState(null);
+            const [usersList, setUsersList] = useState([]);
+            const [currentView, setCurrentView] = useState("login");
+
+            const [loginUser, setLoginUser] = useState("");
+            const [loginPass, setLoginPass] = useState("");
+            const [regFirstName, setRegFirstName] = useState("");
+            const [regLastName, setRegLastName] = useState("");
+            const [regPass, setRegPass] = useState("");
+
+            const [editingUserIndex, setEditingUserIndex] = useState(null);
+            const [adminNewPassword, setAdminNewPassword] = useState("");
+
+            const [selectedMachine, setSelectedMachine] = useState("maquina_tinta");
+            const [checklistItems, setChecklistItems] = useState({});
+            const [observations, setObservations] = useState({});
+            const [customNcTexts, setCustomNcTexts] = useState({});
+            const [savedChecklists, setSavedChecklists] = useState([]);
+            const [activeInspection, setActiveInspection] = useState(null);
+
+            const [searchQuery, setSearchQuery] = useState("");
+            const [filterStatus, setFilterStatus] = useState("all");
+            const [sortOrder, setSortOrder] = useState("desc");
+            const [expandedDates, setExpandedDates] = useState({});
+
+            useEffect(() => {
+                setTimeout(() => {
+                    const storedUsers = localStorage.getItem("checkpro_users");
+                    let initialUsers = storedUsers ? JSON.parse(storedUsers) : [
+                        { firstName: "Master", lastName: "Admin", username: "master", pass: "master", role: "admin" }
+                    ];
+                    setUsersList(initialUsers);
+                    localStorage.setItem("checkpro_users", JSON.stringify(initialUsers));
+
+                    const activeSession = localStorage.getItem("checkpro_session");
+                    if (activeSession) {
+                        try {
+                            const parsedUser = JSON.parse(activeSession);
+                            setUser(parsedUser);
+                            setCurrentView("home");
+                        } catch(e) {
+                            setCurrentView("login");
+                        }
+                    } else {
+                        setCurrentView("login");
+                    }
+
+                    const data = localStorage.getItem("checkpro_checklists_db");
+                    if (data) {
+                        try { setSavedChecklists(JSON.parse(data)); } catch(e) {}
+                    }
+
+                    setIsLoading(false);
+                }, 1200);
+            }, []);
+
+            const saveChecklists = (newList) => {
+                setSavedChecklists(newList);
+                localStorage.setItem("checkpro_checklists_db", JSON.stringify(newList));
+            };
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                const found = usersList.find(u => u.username.toLowerCase() === loginUser.toLowerCase() && u.pass === loginPass);
+                if (found) {
+                    setUser(found);
+                    localStorage.setItem("checkpro_session", JSON.stringify(found));
+                    setCurrentView("home");
+                    setLoginUser("");
+                    setLoginPass("");
+                } else {
+                    alert("Usuário ou senha incorretos!");
+                }
+            };
+
+            const handleRegister = (e) => {
+                e.preventDefault();
+                if (!regFirstName || !regLastName || !regPass) return alert("Preencha todos os campos!");
+                const username = (regFirstName + "." + regLastName).toLowerCase().replace(/\s+/g, '');
+                if (usersList.some(u => u.username === username)) {
+                    return alert("Este usuário já existe!");
+                }
+                const newUser = {
+                    firstName: regFirstName,
+                    lastName: regLastName,
+                    username: username,
+                    pass: regPass,
+                    role: "comum"
+                };
+                const updatedUsers = [...usersList, newUser];
+                setUsersList(updatedUsers);
+                localStorage.setItem("checkpro_users", JSON.stringify(updatedUsers));
+                alert(`Usuário cadastrado com sucesso! Seu login é: ${username}`);
+                setUser(newUser);
+                localStorage.setItem("checkpro_session", JSON.stringify(newUser));
+                setCurrentView("home");
+            };
+
+            const handleLogout = () => {
+                if (confirm("Deseja realmente sair da sua conta?")) {
+                    localStorage.removeItem("checkpro_session");
+                    setUser(null);
+                    setCurrentView("login");
+                }
+            };
+
+            const startChecklist = (machineKey) => {
+                setSelectedMachine(machineKey);
+                const mach = MACHINES_DATA[machineKey];
+                const initial = {};
+                mach.items.forEach(item => { initial[item.id] = "C"; });
+                setChecklistItems(initial);
+                setObservations({});
+                setCustomNcTexts({});
+                setCurrentView("checklist");
+            };
+
+            const handleNcDropdownChange = (itemId, val) => {
+                setObservations(prev => ({ ...prev, [itemId]: val }));
+            };
+
+            const saveNewChecklistRecord = () => {
+                const mach = MACHINES_DATA[selectedMachine];
+                const now = new Date();
+
+                const processedItems = mach.items.map(it => {
+                    const st = checklistItems[it.id] || "C";
+                    let obs = observations[it.id] || "";
+                    if (st === "NC" && (obs.includes("Outro") || !obs)) {
+                        obs = customNcTexts[it.id] || "Não Conforme sem descrição especificada";
+                    }
+                    return {
+                        id: it.id,
+                        name: it.name,
+                        status: st,
+                        observation: obs
+                    };
+                });
+
+                const newRecord = {
+                    id: Date.now(),
+                    machineKey: selectedMachine,
+                    machineName: mach.name,
+                    sector: mach.sector,
+                    operator: `${user.firstName} ${user.lastName}`,
+                    dateStr: now.toLocaleDateString('pt-BR'),
+                    timeStr: now.toLocaleTimeString('pt-BR'),
+                    timestamp: now.getTime(),
+                    items: processedItems
+                };
+
+                const updatedList = [newRecord, ...savedChecklists];
+                saveChecklists(updatedList);
+                alert("Checklist salvo com sucesso!");
+                setActiveInspection(newRecord);
+                setCurrentView("details");
+            };
+
+            const deleteChecklist = (id) => {
+                if (user.role !== 'admin') return alert("Apenas administradores podem excluir.");
+                if (confirm("Confirma a exclusão deste checklist do banco de dados?")) {
+                    const filtered = savedChecklists.filter(item => item.id !== id);
+                    saveChecklists(filtered);
+                    setCurrentView("history");
+                }
+            };
+
+            const handleAdminChangePassword = (targetUsername) => {
+                if (!adminNewPassword) return alert("Digite a nova senha!");
+                const updated = usersList.map(u => {
+                    if (u.username === targetUsername) u.pass = adminNewPassword;
+                    return u;
+                });
+                setUsersList(updated);
+                localStorage.setItem("checkpro_users", JSON.stringify(updated));
+                alert(`Senha do usuário @${targetUsername} alterada com sucesso!`);
+                setEditingUserIndex(null);
+                setAdminNewPassword("");
+            };
+
+            const filteredChecklists = savedChecklists.filter(item => {
+                const matchQuery = item.dateStr.includes(searchQuery) || item.machineName.toLowerCase().includes(searchQuery.toLowerCase()) || item.operator.toLowerCase().includes(searchQuery.toLowerCase());
+                if (!matchQuery) return false;
+                if (filterStatus === 'nc') return item.items.some(i => i.status === 'NC');
+                if (filterStatus === 'na') return item.items.some(i => i.status === 'NA');
+                return true;
+            }).sort((a, b) => {
+                if (sortOrder === 'asc') return a.timestamp - b.timestamp;
+                if (sortOrder === 'machine') return a.machineName.localeCompare(b.machineName);
+                return b.timestamp - a.timestamp;
+            });
+
+            const groupedByDate = {};
+            filteredChecklists.forEach(item => {
+                if (!groupedByDate[item.dateStr]) groupedByDate[item.dateStr] = [];
+                groupedByDate[item.dateStr].push(item);
+            });
+
+            if (isLoading) {
+                return (
+                    <div className="min-h-screen bg-slate-900 text-white flex flex-col items-center justify-center p-6">
+                        <div className="bg-blue-600 w-20 h-20 rounded-2xl flex items-center justify-center mb-6 shadow-2xl">
+                            <span className="text-3xl font-extrabold text-white tracking-widest">CP</span>
+                        </div>
+                        <h1 className="text-2xl font-bold tracking-tight mb-2">CHECKPRO</h1>
+                        <p className="text-sm text-slate-400 mb-8">Sistema Industrial de Checklist Diário</p>
+                        
+                        <div className="flex items-center space-x-3 bg-slate-800 px-5 py-3 rounded-xl border border-slate-700">
+                            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full spinner"></div>
+                            <span className="text-xs font-semibold text-slate-300">Carregando Banco de Dados...</span>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="min-h-screen bg-slate-100 flex flex-col">
+                    <header className="bg-blue-800 text-white shadow-lg sticky top-0 z-50">
+                        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+                            <div 
+                                onClick={() => user && setCurrentView("home")} 
+                                className="flex items-center space-x-3 cursor-pointer group">
+                                <div className="bg-white text-blue-800 font-extrabold px-3 py-1.5 rounded-xl text-sm shadow group-hover:bg-blue-50 transition">
+                                    CHECKPRO
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-base leading-tight">Checklist Industrial</h1>
+                                    <p className="text-xs text-blue-200">🟢 Sistema Ativo</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center space-x-2">
+                                {user ? (
+                                    <>
+                                        <button onClick={() => setCurrentView("home")} className="px-3 py-1.5 bg-blue-700 hover:bg-blue-900 rounded-lg text-xs font-bold transition">Início</button>
+                                        <button onClick={() => setCurrentView("history")} className="px-3 py-1.5 bg-blue-700 hover:bg-blue-900 rounded-lg text-xs font-bold transition">Histórico</button>
+                                        {user.role === 'admin' && (
+                                            <button onClick={() => setCurrentView("admin")} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 rounded-lg text-xs font-bold transition">Gestão</button>
+                                        )}
+                                        <button onClick={() => setCurrentView("manual")} className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-xs font-bold transition">Manual 📖</button>
+                                        <button onClick={() => setCurrentView("profile")} className="px-3 py-1.5 bg-blue-700 hover:bg-blue-900 rounded-lg text-xs font-bold transition">Perfil</button>
+                                        <button onClick={handleLogout} className="px-3 py-1.5 bg-red-600 hover:bg-red-700 rounded-lg text-xs font-bold transition">Sair</button>
+                                    </>
+                                ) : (
+                                    <div className="flex space-x-2">
+                                        <button onClick={() => setCurrentView("login")} className="px-3.5 py-1.5 bg-white text-blue-800 font-bold rounded-lg text-xs shadow">Entrar</button>
+                                        <button onClick={() => setCurrentView("register")} className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 font-bold rounded-lg text-xs shadow">Registrar</button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="max-w-5xl mx-auto px-4 py-6 flex-1 w-full">
+
+                        {currentView === "login" && (
+                            <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 border border-slate-200 mt-4">
+                                <div className="text-center mb-6">
+                                    <div className="bg-blue-100 text-blue-800 w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 font-bold text-2xl">
+                                        🔐
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-slate-900">Entrar no Sistema</h2>
+                                    <p className="text-xs text-slate-500 mt-1">Padrão Master: <strong className="text-slate-800">master / master</strong></p>
+                                </div>
+                                <form onSubmit={handleLogin} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Usuário</label>
+                                        <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)} placeholder="Ex: master ou operador.silva" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Senha</label>
+                                        <input type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm" required />
+                                    </div>
+                                    <button type="submit" className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">Acessar Conta</button>
+                                </form>
+                                <div className="mt-6 pt-6 border-t border-slate-200 text-center text-xs">
+                                    <p className="text-slate-500">Ainda não tem conta de operador?</p>
+                                    <button onClick={() => setCurrentView("register")} className="mt-2 text-blue-700 font-bold hover:underline">Registrar novo usuário →</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "register" && (
+                            <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 border border-slate-200 mt-4">
+                                <div className="text-center mb-6">
+                                    <h2 className="text-2xl font-bold text-slate-900">Novo Cadastro</h2>
+                                    <p className="text-xs text-slate-500 mt-1">Cadastre o operador para liberar o checklist</p>
+                                </div>
+                                <form onSubmit={handleRegister} className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nome</label>
+                                        <input type="text" value={regFirstName} onChange={e => setRegFirstName(e.target.value)} placeholder="Ex: Carlos" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Sobrenome</label>
+                                        <input type="text" value={regLastName} onChange={e => setRegLastName(e.target.value)} placeholder="Ex: Silva" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Senha</label>
+                                        <input type="password" value={regPass} onChange={e => setRegPass(e.target.value)} placeholder="••••••••" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:outline-none text-sm" required />
+                                    </div>
+                                    <button type="submit" className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm">Criar Conta e Entrar</button>
+                                </form>
+                                <div className="mt-6 pt-6 border-t border-slate-200 text-center text-xs">
+                                    <button onClick={() => setCurrentView("login")} className="text-blue-700 font-bold hover:underline">← Já possui cadastro? Fazer Login</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "home" && user && (
+                            <div className="space-y-6">
+                                <div className="bg-white rounded-2xl shadow-md p-6 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+                                    <div>
+                                        <span className="text-xs font-bold uppercase tracking-wider text-blue-700 bg-blue-50 px-2.5 py-1 rounded-md">Operador Ativo</span>
+                                        <h2 className="text-2xl font-bold text-slate-900 mt-1">{user.firstName} {user.lastName}</h2>
+                                        <p className="text-xs text-slate-500 mt-0.5">Perfil: <strong className="uppercase text-blue-800">{user.role}</strong> • Banco de dados conectado</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setCurrentView("history")} className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">Histórico Geral</button>
+                                        <button onClick={() => setCurrentView("manual")} className="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2.5 rounded-xl text-xs transition">Manual de Uso 📖</button>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white rounded-2xl shadow-md p-6 border border-slate-200">
+                                    <h3 className="text-xl font-bold text-slate-900 mb-1">Selecione o Equipamento para Inspecionar</h3>
+                                    <p className="text-xs text-slate-500 mb-6">Clique na máquina correspondente para abrir a ficha de verificação:</p>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {Object.keys(MACHINES_DATA).map(key => {
+                                            const mach = MACHINES_DATA[key];
+                                            return (
+                                                <div 
+                                                    key={key} 
+                                                    onClick={() => startChecklist(key)} 
+                                                    className="bg-slate-50 hover:bg-blue-50 border-2 border-slate-200 hover:border-blue-500 rounded-2xl p-5 cursor-pointer transition shadow-sm flex flex-col justify-between group">
+                                                    <div>
+                                                        <div className="flex items-center justify-between mb-3">
+                                                            <div className="bg-blue-100 text-blue-800 p-3 rounded-xl group-hover:bg-blue-600 group-hover:text-white transition">
+                                                                {mach.icon}
+                                                            </div>
+                                                            <span className="text-xs font-bold text-slate-400 uppercase">{mach.sector}</span>
+                                                        </div>
+                                                        <h4 className="text-lg font-bold text-slate-900 mb-1">{mach.name}</h4>
+                                                        <p className="text-xs text-slate-500">{mach.items.length} itens de verificação</p>
+                                                    </div>
+                                                    <div className="mt-4 pt-3 border-t border-slate-200 text-blue-700 font-bold text-xs flex justify-between items-center">
+                                                        <span>Abrir Checklist</span>
+                                                        <span>→</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "checklist" && user && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 space-y-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-slate-200 gap-2">
+                                    <div className="flex items-center space-x-3">
+                                        <div className="bg-blue-100 text-blue-800 p-3 rounded-xl">
+                                            {MACHINES_DATA[selectedMachine].icon}
+                                        </div>
+                                        <div>
+                                            <span className="text-xs font-bold text-blue-700 uppercase bg-blue-50 px-2.5 py-1 rounded-md">{MACHINES_DATA[selectedMachine].sector}</span>
+                                            <h3 className="text-2xl font-bold text-slate-900 mt-1">{MACHINES_DATA[selectedMachine].name}</h3>
+                                        </div>
+                                    </div>
+                                    <div className="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                        <div><strong>Operador:</strong> {user.firstName} {user.lastName}</div>
+                                        <div><strong>Data:</strong> {new Date().toLocaleDateString('pt-BR')}</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {MACHINES_DATA[selectedMachine].items.map((item, index) => {
+                                        const status = checklistItems[item.id] || "C";
+                                        const currentObs = observations[item.id] || "";
+                                        const isCustomText = currentObs.includes("Outro");
+
+                                        return (
+                                            <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 shadow-sm space-y-3">
+                                                <div className="flex items-center space-x-3">
+                                                    <span className="bg-slate-200 text-slate-700 font-bold w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs">
+                                                        {index + 1}
+                                                    </span>
+                                                    <div className="flex items-center space-x-2 flex-1">
+                                                        <span className="text-lg">{item.icon}</span>
+                                                        <h4 className="font-semibold text-slate-900 text-sm">{item.name}</h4>
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-3 gap-2">
+                                                    <button type="button" onClick={() => setChecklistItems(prev => ({ ...prev, [item.id]: "C" }))} className={`py-3 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition ${status === "C" ? "bg-green-600 text-white shadow-md ring-2 ring-green-400" : "bg-white text-green-700 border border-green-300"}`}>{Icons.check} Conforme</button>
+                                                    <button type="button" onClick={() => setChecklistItems(prev => ({ ...prev, [item.id]: "NC" }))} className={`py-3 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition ${status === "NC" ? "bg-red-600 text-white shadow-md ring-2 ring-red-400" : "bg-white text-red-700 border border-red-300"}`}>{Icons.cross} Não Conforme</button>
+                                                    <button type="button" onClick={() => setChecklistItems(prev => ({ ...prev, [item.id]: "NA" }))} className={`py-3 px-2 rounded-xl font-bold text-xs flex items-center justify-center gap-1 transition ${status === "NA" ? "bg-blue-600 text-white shadow-md ring-2 ring-blue-400" : "bg-white text-blue-700 border border-blue-300"}`}>{Icons.minus} Não Aplicável</button>
+                                                </div>
+
+                                                {status === "NC" && (
+                                                    <div className="mt-3 pt-3 border-t border-red-200 bg-red-50 p-3 rounded-xl space-y-2">
+                                                        <label className="block text-xs font-bold text-red-800">
+                                                            ⚠️ Motivo da Não Conformidade (Selecione ou digite):
+                                                        </label>
+                                                        <select 
+                                                            value={currentObs} 
+                                                            onChange={e => handleNcDropdownChange(item.id, e.target.value)}
+                                                            className="w-full px-3 py-2.5 bg-white border border-red-300 rounded-lg text-xs font-medium focus:outline-none focus:ring-2 focus:ring-red-500">
+                                                            {COMMON_NC_REASONS.map((reason, idx) => (
+                                                                <option key={idx} value={idx === 0 ? "" : reason}>{reason}</option>
+                                                            ))}
+                                                        </select>
+
+                                                        {isCustomText && (
+                                                            <input 
+                                                                type="text" 
+                                                                value={customNcTexts[item.id] || ""} 
+                                                                onChange={e => setCustomNcTexts(prev => ({ ...prev, [item.id]: e.target.value }))} 
+                                                                placeholder="Digite a explicação detalhada da falha..." 
+                                                                className="w-full px-3 py-2 bg-white border border-red-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-500 mt-2" 
+                                                            />
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                <div className="flex gap-4 pt-4">
+                                    <button onClick={() => setCurrentView("home")} className="w-1/3 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3.5 rounded-xl text-xs">Cancelar</button>
+                                    <button onClick={saveNewChecklistRecord} className="w-2/3 bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 rounded-xl shadow-lg text-sm">Salvar e Concluir Ficha</button>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "history" && user && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 space-y-6">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-slate-900">Histórico de Checklists</h3>
+                                        <p className="text-xs text-slate-500">Agrupado por data de inspeção</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Pesquisar por Data ou Máquina</label>
+                                        <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Ex: 19/10/26 ou Compressor" className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs" />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Filtrar por Status</label>
+                                        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs">
+                                            <option value="all">Todos os Registros</option>
+                                            <option value="nc">Apenas Não-Conformes (NC)</option>
+                                            <option value="na">Apenas Não-Aplicáveis (NA)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Ordenação</label>
+                                        <select value={sortOrder} onChange={e => setSortOrder(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-xs">
+                                            <option value="desc">Mais Recentes Primeiro</option>
+                                            <option value="asc">Mais Antigos Primeiro</option>
+                                            <option value="machine">Nome da Máquina (A-Z)</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                {Object.keys(groupedByDate).length === 0 ? (
+                                    <div className="text-center py-12 text-slate-400 text-sm">Nenhum checklist registrado ainda.</div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {Object.keys(groupedByDate).map(dateStr => {
+                                            const itemsOnDate = groupedByDate[dateStr];
+                                            const isExpanded = expandedDates[dateStr] !== false;
+                                            return (
+                                                <div key={dateStr} className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                                    <div onClick={() => setExpandedDates(prev => ({ ...prev, [dateStr]: !isExpanded }))} className="bg-slate-100 hover:bg-slate-200 p-4 cursor-pointer flex items-center justify-between">
+                                                        <span className="font-bold text-slate-900 text-sm">📅 Data: {dateStr} ({itemsOnDate.length} inspeções)</span>
+                                                        <span className="text-xs text-blue-700 font-bold">{isExpanded ? "Recolher ▲" : "Expandir ▼"}</span>
+                                                    </div>
+                                                    {isExpanded && (
+                                                        <div className="p-4 space-y-3 bg-white">
+                                                            {itemsOnDate.map(item => (
+                                                                <div key={item.id} className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                                                    <div>
+                                                                        <h4 className="font-bold text-slate-900 text-sm">{item.machineName}</h4>
+                                                                        <p className="text-xs text-slate-500">Operador: {item.operator} • Hora: {item.timeStr}</p>
+                                                                    </div>
+                                                                    <div className="flex gap-2">
+                                                                        <button onClick={() => { setActiveInspection(item); setCurrentView("details"); }} className="bg-blue-700 hover:bg-blue-800 text-white px-3.5 py-2 rounded-xl text-xs font-bold">Ver Ficha</button>
+                                                                        {user && user.role === 'admin' && (
+                                                                            <button onClick={() => deleteChecklist(item.id)} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-2 rounded-xl text-xs font-bold">Excluir</button>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {currentView === "details" && activeInspection && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 space-y-6">
+                                <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+                                    <h3 className="text-xl font-bold text-slate-900">FICHA DE INSPEÇÃO DIÁRIA</h3>
+                                    <button onClick={() => setCurrentView("history")} className="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold px-4 py-2 rounded-xl text-xs">Voltar</button>
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                                    <div><strong>Equipamento:</strong><br/>{activeInspection.machineName}</div>
+                                    <div><strong>Setor:</strong><br/>{activeInspection.sector}</div>
+                                    <div><strong>Operador:</strong><br/>{activeInspection.operator}</div>
+                                    <div><strong>Data/Hora:</strong><br/>{activeInspection.dateStr} às {activeInspection.timeStr}</div>
+                                </div>
+
+                                <div className="overflow-x-auto">
+                                    <table className="w-full border-collapse border border-slate-300 text-xs">
+                                        <thead>
+                                            <tr className="bg-slate-200 text-slate-800">
+                                                <th className="border border-slate-300 p-2.5 w-12 text-center">Item</th>
+                                                <th className="border border-slate-300 p-2.5 text-left">Requisito do Equipamento</th>
+                                                <th className="border border-slate-300 p-2.5 w-32 text-center">Status</th>
+                                                <th className="border border-slate-300 p-2.5 text-left">Observação / Explicação NC</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {activeInspection.items.map((it, idx) => {
+                                                let badgeBg = "bg-green-100 text-green-800 border-green-300";
+                                                let statusText = "Conforme (C)";
+                                                if (it.status === "NC") { badgeBg = "bg-red-100 text-red-800 border-red-300"; statusText = "Não Conforme (NC)"; }
+                                                else if (it.status === "NA") { badgeBg = "bg-blue-100 text-blue-800 border-blue-300"; statusText = "Não Aplicável (NA)"; }
+                                                return (
+                                                    <tr key={it.id} className="hover:bg-slate-50">
+                                                        <td className="border border-slate-300 p-2 text-center font-bold">{idx + 1}</td>
+                                                        <td className="border border-slate-300 p-2">{it.name}</td>
+                                                        <td className="border border-slate-300 p-2 text-center">
+                                                            <span className={`inline-block px-2.5 py-1 rounded-md text-xs font-bold border ${badgeBg}`}>{statusText}</span>
+                                                        </td>
+                                                        <td className="border border-slate-300 p-2 text-red-600 font-medium">{it.observation ? `⚠️ ${it.observation}` : "-"}</td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "admin" && user && user.role === 'admin' && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 space-y-6">
+                                <h3 className="text-2xl font-bold text-slate-900">Painel do Administrador</h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-center">
+                                        <div className="text-blue-700 text-3xl font-extrabold">{savedChecklists.length}</div>
+                                        <div className="text-xs font-bold text-blue-900 uppercase mt-1">Total de Inspeções</div>
+                                    </div>
+                                    <div className="bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
+                                        <div className="text-green-700 text-3xl font-extrabold">{usersList.length}</div>
+                                        <div className="text-xs font-bold text-green-900 uppercase mt-1">Operadores Cadastrados</div>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-base mb-3">Gerenciamento de Usuários e Senhas</h4>
+                                    <div className="space-y-3">
+                                        {usersList.map((u, idx) => (
+                                            <div key={idx} className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <h5 className="font-bold text-slate-900 text-sm">{u.firstName} {u.lastName} <span className="text-xs text-slate-500">(@{u.username})</span></h5>
+                                                        <p className="text-xs text-blue-700 font-semibold uppercase">Permissão: {u.role}</p>
+                                                    </div>
+                                                    <div className="flex gap-2">
+                                                        <button 
+                                                            onClick={() => setEditingUserIndex(editingUserIndex === idx ? null : idx)} 
+                                                            className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1.5 rounded-lg text-xs font-bold">
+                                                            🔑 Alterar Senha
+                                                        </button>
+                                                        {u.username !== 'master' && (
+                                                            <>
+                                                                <button onClick={() => {
+                                                                    const updated = usersList.map(item => {
+                                                                        if (item.username === u.username) item.role = item.role === 'admin' ? 'comum' : 'admin';
+                                                                        return item;
+                                                                    });
+                                                                    setUsersList(updated);
+                                                                    localStorage.setItem("checkpro_users", JSON.stringify(updated));
+                                                                }} className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold">Alternar Papel</button>
+                                                                
+                                                                <button onClick={() => {
+                                                                    if (confirm(`Remover usuário ${u.username}?`)) {
+                                                                        const updated = usersList.filter(item => item.username !== u.username);
+                                                                        setUsersList(updated);
+                                                                        localStorage.setItem("checkpro_users", JSON.stringify(updated));
+                                                                    }
+                                                                }} className="bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-lg text-xs font-bold">Excluir</button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {editingUserIndex === idx && (
+                                                    <div className="bg-white p-3 rounded-lg border border-blue-200 flex items-center gap-2">
+                                                        <input 
+                                                            type="password" 
+                                                            placeholder="Digite a nova senha para este usuário" 
+                                                            value={adminNewPassword} 
+                                                            onChange={e => setAdminNewPassword(e.target.value)} 
+                                                            className="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-xs focus:outline-none"
+                                                        />
+                                                        <button 
+                                                            onClick={() => handleAdminChangePassword(u.username)}
+                                                            className="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-xs">
+                                                            Salvar Senha
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "manual" && (
+                            <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-200 space-y-6">
+                                <h3 className="text-2xl font-bold text-slate-900 flex items-center gap-2">📖 Manual Interativo do Usuário</h3>
+                                <p className="text-xs text-slate-500">Guia passo a passo de utilização do sistema de inspeção industrial.</p>
+
+                                <div className="space-y-4 text-xs text-slate-700 leading-relaxed">
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h4 className="font-bold text-slate-900 text-sm mb-1">1. Primeiro Acesso e Autenticação</h4>
+                                        <p>O aplicativo exige obrigatoriamente entrar em uma conta. Utilize o usuário padrão <strong>master</strong> com a senha <strong>master</strong> ou clique em <em>Registrar</em> para criar uma nova conta de operador.</p>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h4 className="font-bold text-slate-900 text-sm mb-1">2. Como Preencher um Checklist</h4>
+                                        <p>Selecione a máquina desejada na tela inicial. Para cada item da máquina, selecione uma das 3 opções:</p>
+                                        <ul className="list-disc ml-5 mt-1 space-y-1">
+                                            <li><strong className="text-green-700">Conforme (C):</strong> O equipamento está funcionando corretamente.</li>
+                                            <li><strong className="text-red-700">Não Conforme (NC):</strong> Existe uma falha. Escolha o motivo no menu suspenso ou digite um texto livre.</li>
+                                            <li><strong className="text-blue-700">Não Aplicável (NA):</strong> O item não se aplica àquele modelo de máquina.</li>
+                                        </ul>
+                                    </div>
+
+                                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                                        <h4 className="font-bold text-slate-900 text-sm mb-1">3. Consulta e Gestão de Registros</h4>
+                                        <p>Na aba <strong>Histórico</strong>, os registros ficam salvos e agrupados por data em formato sanfonado (árvore). Administradores podem alterar senhas de outros usuários e excluir registros no painel de <strong>Gestão</strong>.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {currentView === "profile" && user && (
+                            <div className="max-w-md mx-auto bg-white rounded-2xl shadow-xl p-8 border border-slate-200 space-y-6">
+                                <h3 className="text-2xl font-bold text-slate-900 text-center">Perfil do Operador</h3>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">Nova Senha</label>
+                                        <input type="password" id="newPassInput" placeholder="Nova senha" className="w-full px-4 py-3 rounded-xl border border-slate-300 focus:outline-none text-xs" />
+                                    </div>
+                                    <button onClick={() => {
+                                        const val = document.getElementById("newPassInput").value;
+                                        if (!val) return alert("Digite a nova senha!");
+                                        const updatedUsers = usersList.map(u => {
+                                            if (u.username === user.username) u.pass = val;
+                                            return u;
+                                        });
+                                        setUsersList(updatedUsers);
+                                        localStorage.setItem("checkpro_users", JSON.stringify(updatedUsers));
+                                        alert("Sua senha foi alterada com sucesso!");
+                                    }} className="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl shadow text-xs">Salvar Alterações</button>
+                                </div>
+                            </div>
+                        )}
+                    </main>
+
+                    <footer className="bg-white border-t border-slate-200 py-4 mt-8 text-center text-xs text-slate-500">
+                        CHECKPRO • Sistema Industrial de Checklist Diário &copy; 2026
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
